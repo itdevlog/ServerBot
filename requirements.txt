@@ -1,5 +1,5 @@
 aiogram>=3.13,<4
-asyncssh>=2.17
+asyncssh[bcrypt]>=2.17
 pydantic>=2.7
 PyYAML>=6.0
 APScheduler>=3.10,<4

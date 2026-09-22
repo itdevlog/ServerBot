@@ -43,7 +43,7 @@ ENV_EXAMPLE_NAME="bot.env.example"
 TOKEN_ENV_KEY="TG_BOT_TOKEN"           # Ключ токена бота
 TOKEN_PLACEHOLDER="YOUR_TELEGRAM_BOT_TOKEN"  # Подстрока «токен не задан»
 REQUIRED_ENV_KEYS=""                   # Доп. обязательные ключи, напр. "CHILD_ID PARENT_IDS"
-DOCTOR_IMPORTS="aiogram asyncssh apscheduler pydantic yaml"  # Python-модули, проверяемые в doctor
+DOCTOR_IMPORTS="aiogram asyncssh bcrypt apscheduler pydantic yaml"  # Python-модули, проверяемые в doctor
 
 # --- Фича: бэкап БД (SQLite) --------------------------------------------------
 USE_DB_BACKUP="false"

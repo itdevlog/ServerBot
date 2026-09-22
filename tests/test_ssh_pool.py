@@ -1,5 +1,7 @@
 import asyncio
 import os
+import shutil
+import subprocess
 
 import asyncssh
 import pytest
@@ -155,6 +157,31 @@ async def test_aclose_closes_cached_connections(monkeypatch):
     await pool.aclose()
 
     assert conn.closed is True
+
+
+def test_encrypted_openssh_key_loads(tmp_path):
+    if shutil.which("ssh-keygen") is None:
+        pytest.skip("ssh-keygen not available")
+
+    key_path = tmp_path / "id_ed25519"
+    passphrase = "secret123"
+    subprocess.run(
+        [
+            "ssh-keygen",
+            "-t",
+            "ed25519",
+            "-N",
+            passphrase,
+            "-f",
+            str(key_path),
+            "-q",
+        ],
+        check=True,
+    )
+
+    key = asyncssh.import_private_key(key_path.read_text(), passphrase)
+
+    assert key is not None
 
 
 async def test_run_respects_max_concurrency(monkeypatch):
