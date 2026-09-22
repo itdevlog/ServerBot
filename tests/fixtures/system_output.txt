@@ -1,0 +1,23 @@
+###HOST
+vps-web1
+###LOAD
+0.15 0.20 0.25 1/234 5678
+###NPROC
+4
+###UPTIME
+123456.78 987654.32
+###MEM
+MemTotal:        2048000 kB
+MemFree:          500000 kB
+MemAvailable:    1024000 kB
+Buffers:           20000 kB
+Cached:           300000 kB
+###DF
+Filesystem     1024-blocks    Used Available Capacity Mounted on
+/dev/vda1        8240832 4120416   3700000      53% /
+###TOP
+top - 10:00:00 up 1 day,  1:00,  1 user,  load average: 0.15, 0.20, 0.25
+Tasks: 123 total,   1 running, 122 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  5.0 us,  2.0 sy,  0.0 ni, 92.5 id,  0.5 wa,  0.0 hi,  0.0 si,  0.0 st
+MiB Mem :   2000.0 total,    488.3 free,    900.0 used,    611.7 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   1000.0 avail Mem
