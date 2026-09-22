@@ -1,0 +1,2 @@
+c1a2b3d4e5f6	web-nginx	nginx:1.27	Up 3 days
+9f8e7d6c5b4a	postgres	db-postgres:16	Exited (0) 2 hours ago
