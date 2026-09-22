@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html
+
 from aiogram import BaseMiddleware
 from aiogram.fsm.state import State, StatesGroup
 
@@ -55,6 +57,8 @@ async def run_command(
     try:
         result = await pool.run(server, command)
     except ServerUnavailable as exc:
-        await answer(f"❌ {server.name}: недоступен ({exc})")
+        await answer(
+            f"❌ {html.escape(server.name)}: недоступен ({html.escape(str(exc))})"
+        )
         return
     await answer(format_command_result(result, max_lines))
