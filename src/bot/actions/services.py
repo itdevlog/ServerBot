@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from bot.actions.base import InvalidArgument, PreparedAction, validate_token
 from bot.config import ServerConfig
 
-_UNIT_RE = re.compile(r"^[A-Za-z0-9@_.-]+$")
+_UNIT_RE = re.compile(r"[A-Za-z0-9@_.-]+")
 
 LIST_UNITS_COMMAND = (
     "systemctl list-units --type=service --state=running --no-pager --plain"
@@ -22,7 +22,7 @@ class UnitInfo:
 
 
 def validate_unit(name: str) -> str:
-    if not name or not _UNIT_RE.match(name):
+    if not name or not _UNIT_RE.fullmatch(name):
         raise InvalidArgument(f"Invalid unit: {name!r}")
     return name
 

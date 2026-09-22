@@ -32,6 +32,16 @@ def test_validate_token_rejects_shell_metacharacters():
             validate_token(bad)
 
 
+def test_validate_token_rejects_trailing_newline():
+    with pytest.raises(InvalidArgument):
+        validate_token("nginx\n")
+
+
+def test_validate_unit_rejects_trailing_newline():
+    with pytest.raises(InvalidArgument):
+        services.validate_unit("nginx\n")
+
+
 def test_service_action_is_dangerous():
     action = services.service_action(make_server(), "nginx", "restart")
 

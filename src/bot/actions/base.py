@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-_TOKEN_RE = re.compile(r"^[A-Za-z0-9@_.:/-]+$")
+_TOKEN_RE = re.compile(r"[A-Za-z0-9@_.:/-]+")
 
 
 class InvalidArgument(Exception):
@@ -19,6 +19,6 @@ class PreparedAction:
 
 
 def validate_token(value: str, field: str = "argument") -> str:
-    if not value or not _TOKEN_RE.match(value):
+    if not value or not _TOKEN_RE.fullmatch(value):
         raise InvalidArgument(f"Invalid {field}: {value!r}")
     return value
