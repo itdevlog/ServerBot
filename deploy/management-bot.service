@@ -1,0 +1,16 @@
+[Unit]
+Description=Telegram VPS Manager Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/management
+EnvironmentFile=/opt/management/bot.env
+ExecStart=/opt/management/.venv/bin/python -m bot.main
+Restart=on-failure
+RestartSec=5
+User=management
+
+[Install]
+WantedBy=multi-user.target

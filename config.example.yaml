@@ -1,0 +1,42 @@
+telegram:
+  token: "${TG_BOT_TOKEN}"
+  allowed_users: [123456789]
+
+defaults:
+  ssh:
+    connect_timeout: 10
+    command_timeout: 30
+    max_concurrency: 8
+  output_max_lines: 40
+
+alerts:
+  enabled: true
+  interval: 60
+  cooldown: 300
+  thresholds:
+    cpu_percent: 85
+    ram_percent: 90
+    disk_percent: 85
+    load_per_cpu: 2.0
+    offline: true
+
+servers:
+  - id: web1
+    name: "Web 1"
+    host: 1.2.3.4
+    port: 22
+    user: admin
+    auth:
+      type: password
+      password: "${WEB1_PASS}"
+    tags: [web, prod]
+  - id: db1
+    name: "DB 1"
+    host: 5.6.7.8
+    port: 22
+    user: deploy
+    auth:
+      type: key
+      key_path: "~/.ssh/db1"
+      passphrase: "${DB1_PASSPHRASE}"
+    tags: [db, prod]
