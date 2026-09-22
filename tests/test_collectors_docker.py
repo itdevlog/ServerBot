@@ -24,6 +24,14 @@ def test_parse_docker_ps_ignores_blank_lines():
     assert parse_docker_ps("\n\n") == []
 
 
+def test_parse_docker_ps_skips_malformed_lines():
+    text = "onlyonecolumn\nc1a2b3d4e5f6\tweb\tnginx:1.27\tUp 3 days\n"
+
+    containers = parse_docker_ps(text)
+
+    assert [container.name for container in containers] == ["web"]
+
+
 def make_server() -> ServerConfig:
     return ServerConfig(
         id="web1",

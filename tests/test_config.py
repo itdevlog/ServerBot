@@ -99,3 +99,29 @@ servers:
 """
     with pytest.raises(ValueError, match="duplicate server id"):
         load_config(write(tmp_path, text), {})
+
+
+def test_env_values_with_yaml_metacharacters_are_safe(tmp_path):
+    text = """
+telegram: { token: t, allowed_users: [1] }
+servers:
+  - id: a
+    name: a
+    host: h
+    user: u
+    auth: { type: password, password: "${PASS}" }
+"""
+    tricky = 'p": #not-a-comment\n  injected: true'
+
+    config = load_config(write(tmp_path, text), {"PASS": tricky})
+
+    assert config.server("a").auth.password == tricky
+
+
+def test_missing_env_variable_still_raises(tmp_path):
+    text = """
+telegram: { token: "${NOPE}", allowed_users: [1] }
+servers: []
+"""
+    with pytest.raises(ConfigError, match="NOPE"):
+        load_config(write(tmp_path, text), {})

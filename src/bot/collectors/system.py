@@ -52,7 +52,7 @@ def _split_sections(text: str) -> dict[str, str]:
         match = _SECTION_RE.match(line.strip())
         if match:
             current = match.group(1)
-            sections[current] = []
+            sections.setdefault(current, [])
             continue
         if current is not None:
             sections[current].append(line)
@@ -130,21 +130,26 @@ def parse_uptime(uptime_section: str) -> float:
 
 def parse_system_output(text: str) -> SystemMetrics:
     sections = _split_sections(text)
-    load1, load5, load15 = parse_loadavg(_require(sections, "LOAD"))
-    cpu_count = int(_require(sections, "NPROC").split()[0])
-    return SystemMetrics(
-        hostname=_require(sections, "HOST").splitlines()[0].strip(),
-        cpu_percent=parse_cpu_stat(
-            _require(sections, "CPU1"), _require(sections, "CPU2")
-        ),
-        ram_percent=parse_meminfo(_require(sections, "MEM")),
-        disk_percent=parse_df(_require(sections, "DF")),
-        load1=load1,
-        load5=load5,
-        load15=load15,
-        cpu_count=cpu_count,
-        uptime_seconds=parse_uptime(_require(sections, "UPTIME")),
-    )
+    try:
+        load1, load5, load15 = parse_loadavg(_require(sections, "LOAD"))
+        cpu_count = int(_require(sections, "NPROC").split()[0])
+        return SystemMetrics(
+            hostname=_require(sections, "HOST").splitlines()[0].strip(),
+            cpu_percent=parse_cpu_stat(
+                _require(sections, "CPU1"), _require(sections, "CPU2")
+            ),
+            ram_percent=parse_meminfo(_require(sections, "MEM")),
+            disk_percent=parse_df(_require(sections, "DF")),
+            load1=load1,
+            load5=load5,
+            load15=load15,
+            cpu_count=cpu_count,
+            uptime_seconds=parse_uptime(_require(sections, "UPTIME")),
+        )
+    except CollectorError:
+        raise
+    except (ValueError, IndexError) as exc:
+        raise CollectorError(f"Cannot parse system output: {exc}") from exc
 
 
 async def collect_system(pool: SshPool, server: ServerConfig) -> SystemMetrics:

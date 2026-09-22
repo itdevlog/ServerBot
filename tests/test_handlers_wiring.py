@@ -69,3 +69,31 @@ async def test_cb_menu_unknown_server_alerts():
 
     assert callback.message.answers == []
     assert callback.answers == [("Сервер не найден", True)]
+
+
+class FakeState:
+    def __init__(self, data) -> None:
+        self._data = data
+        self.cleared = False
+
+    async def get_data(self):
+        return self._data
+
+    async def clear(self) -> None:
+        self.cleared = True
+
+
+async def test_shell_empty_command_is_rejected():
+    from bot.handlers import shell as shell_module
+    from bot.security import ConfirmationStore
+
+    message = FakeMessage()
+    message.text = "   "
+    state = FakeState({"server_id": "web1"})
+    confirmations = ConfirmationStore()
+
+    await shell_module.on_shell_command(message, state, make_config(), confirmations)
+
+    assert state.cleared is True
+    assert message.answers
+    assert confirmations.pending_count() == 0

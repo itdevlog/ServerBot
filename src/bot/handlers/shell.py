@@ -57,7 +57,12 @@ async def on_shell_command(
         await message.answer("Сервер не найден")
         await state.clear()
         return
-    action = shell_action(server, message.text or "")
+    command = (message.text or "").strip()
+    if not command:
+        await message.answer("Пустая команда — отменено")
+        await state.clear()
+        return
+    action = shell_action(server, command)
     token = confirmations.create(message.from_user.id, action)
     await message.answer(
         confirm_prompt("Выполнить на {name}:", server, action.command),

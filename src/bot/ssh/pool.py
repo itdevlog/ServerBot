@@ -56,8 +56,8 @@ class SshPool:
         self, server: ServerConfig, command: str, timeout: float | None = None
     ) -> CommandResult:
         limit = timeout if timeout is not None else self._defaults.command_timeout
-        started = time.monotonic()
         async with self._semaphore:
+            started = time.monotonic()
             try:
                 connection = await self._get_connection(server)
                 result = await asyncio.wait_for(connection.run(command, check=False), limit)
@@ -66,7 +66,7 @@ class SshPool:
                 if connection is not None:
                     connection.close()
                 raise ServerUnavailable(str(exc)) from exc
-        duration = time.monotonic() - started
+            duration = time.monotonic() - started
         return CommandResult(
             stdout=result.stdout or "",
             stderr=result.stderr or "",

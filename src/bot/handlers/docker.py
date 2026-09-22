@@ -8,7 +8,7 @@ from bot.actions.base import InvalidArgument
 from bot.actions.docker import docker_logs_command, docker_restart_action
 from bot.collectors.docker import CollectorError, collect_docker
 from bot.config import AppConfig
-from bot.formatting import confirm_prompt
+from bot.formatting import confirm_prompt, probe_error_text
 from bot.handlers.common import MenuState, run_command
 from bot.keyboards import confirm_keyboard, docker_keyboard
 from bot.security import ConfirmationStore
@@ -29,7 +29,7 @@ async def cb_docker(
     try:
         containers = await collect_docker(pool, server)
     except (ServerUnavailable, CollectorError) as exc:
-        await callback.answer(f"Ошибка: {exc}", show_alert=True)
+        await callback.answer(f"{probe_error_text(exc)}: {exc}", show_alert=True)
         return
     names = [container.name for container in containers]
     if not names:

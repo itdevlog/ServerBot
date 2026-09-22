@@ -7,6 +7,7 @@ from bot.formatting import (
     format_command_result,
     format_duration,
     format_metrics,
+    probe_error_text,
     truncate_output,
 )
 from bot.ssh.pool import CommandResult
@@ -123,3 +124,11 @@ def test_confirm_prompt_escapes_name_and_command():
     assert "A&lt;B&gt;&amp;C" in text
     assert "&lt;hi&gt;" in text
     assert "<hi>" not in text
+
+
+def test_probe_error_text_distinguishes_parse_and_unavailable():
+    from bot.collectors.system import CollectorError
+    from bot.ssh.pool import ServerUnavailable
+
+    assert probe_error_text(ServerUnavailable("boom")) == "недоступен"
+    assert probe_error_text(CollectorError("bad")) == "ошибка данных"

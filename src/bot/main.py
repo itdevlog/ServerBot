@@ -116,7 +116,6 @@ async def run(config: AppConfig) -> None:
     finally:
         scheduler.shutdown(wait=False)
         await pool.aclose()
-        await bot.session.close()
 
 
 def main() -> None:

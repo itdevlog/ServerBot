@@ -70,6 +70,22 @@ def test_missing_section_raises():
         parse_system_output("###HOST\nonly\n")
 
 
+def test_malformed_numeric_section_raises_collector_error():
+    text = FIXTURE.read_text(encoding="utf-8").replace("###NPROC\n4", "###NPROC\nnope")
+
+    with pytest.raises(CollectorError):
+        parse_system_output(text)
+
+
+def test_malformed_load_section_raises_collector_error():
+    text = FIXTURE.read_text(encoding="utf-8").replace(
+        "###LOAD\n0.15 0.20 0.25 1/234 5678", "###LOAD\ngarbage"
+    )
+
+    with pytest.raises(CollectorError):
+        parse_system_output(text)
+
+
 def make_server() -> ServerConfig:
     return ServerConfig(
         id="web1",

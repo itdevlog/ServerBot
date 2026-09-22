@@ -22,3 +22,9 @@ def validate_token(value: str, field: str = "argument") -> str:
     if not value or not _TOKEN_RE.fullmatch(value):
         raise InvalidArgument(f"Invalid {field}: {value!r}")
     return value
+
+
+def validate_positive_int(value: int, field: str = "lines") -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise InvalidArgument(f"Invalid {field}: {value!r}")
+    return value

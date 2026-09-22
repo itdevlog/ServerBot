@@ -5,6 +5,7 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.collectors.system import collect_system
 from bot.config import AppConfig
+from bot.formatting import probe_error_text
 from bot.keyboards import server_menu_keyboard, servers_keyboard
 from bot.ssh.pool import SshPool
 
@@ -25,7 +26,7 @@ async def cmd_statusall(message: Message, config: AppConfig, pool: SshPool) -> N
     lines = []
     for server, result in zip(config.servers, results):
         if isinstance(result, BaseException):
-            lines.append(f"🔴 {server.name}: недоступен ({result})")
+            lines.append(f"🔴 {server.name}: {probe_error_text(result)} ({result})")
             continue
         lines.append(
             f"🟢 {server.name}: CPU {result.cpu_percent:.0f}% "

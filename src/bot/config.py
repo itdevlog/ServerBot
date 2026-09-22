@@ -106,7 +106,17 @@ class AppConfig(BaseModel):
         return None
 
 
+def _substitute_env(value, env: Mapping[str, str] | None):
+    if isinstance(value, str):
+        return expand_env(value, env)
+    if isinstance(value, dict):
+        return {key: _substitute_env(item, env) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_substitute_env(item, env) for item in value]
+    return value
+
+
 def load_config(path: str | Path, env: Mapping[str, str] | None = None) -> AppConfig:
     raw = Path(path).read_text(encoding="utf-8")
-    data = yaml.safe_load(expand_env(raw, env))
+    data = _substitute_env(yaml.safe_load(raw), env)
     return AppConfig.model_validate(data)

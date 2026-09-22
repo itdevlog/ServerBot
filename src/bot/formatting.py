@@ -3,7 +3,7 @@ from __future__ import annotations
 import html
 
 from bot.alerts.engine import AlertEvent
-from bot.collectors.system import SystemMetrics
+from bot.collectors.system import CollectorError, SystemMetrics
 from bot.config import ServerConfig
 from bot.ssh.pool import CommandResult
 
@@ -57,6 +57,12 @@ def format_alert(event: AlertEvent, server: ServerConfig) -> str:
 def confirm_prompt(template: str, server: ServerConfig, command: str) -> str:
     header = template.format(name=f"<b>{html.escape(server.name)}</b>")
     return f"{header}\n<code>{html.escape(command)}</code>"
+
+
+def probe_error_text(exc: BaseException) -> str:
+    if isinstance(exc, CollectorError):
+        return "ошибка данных"
+    return "недоступен"
 
 
 def format_command_result(result: CommandResult, max_lines: int) -> str:

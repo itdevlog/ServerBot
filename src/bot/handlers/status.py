@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.collectors.system import CollectorError, collect_system
 from bot.config import AppConfig, ServerConfig
-from bot.formatting import format_metrics
+from bot.formatting import format_metrics, probe_error_text
 from bot.ssh.pool import ServerUnavailable, SshPool
 
 router = Router()
@@ -16,7 +16,7 @@ async def send_metrics(
     try:
         metrics = await collect_system(pool, server)
     except (ServerUnavailable, CollectorError) as exc:
-        await answer(f"❌ {server.name}: недоступен ({exc})")
+        await answer(f"❌ {server.name}: {probe_error_text(exc)} ({exc})")
         return
     await answer(format_metrics(server, metrics), parse_mode="HTML")
 

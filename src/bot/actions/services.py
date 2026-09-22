@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from bot.actions.base import InvalidArgument, PreparedAction
+from bot.actions.base import InvalidArgument, PreparedAction, validate_positive_int
 from bot.config import ServerConfig
 
 _UNIT_RE = re.compile(r"[A-Za-z0-9@_.-]+")
@@ -60,4 +60,5 @@ def parse_systemctl_units(text: str) -> list[UnitInfo]:
 
 def logs_command(unit: str, lines: int = 50) -> str:
     safe_unit = validate_unit(unit)
-    return f"journalctl -u {safe_unit} -n {int(lines)} --no-pager"
+    safe_lines = validate_positive_int(lines)
+    return f"journalctl -u {safe_unit} -n {safe_lines} --no-pager"

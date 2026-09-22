@@ -69,6 +69,17 @@ def test_logs_command():
     assert services.logs_command("nginx", 20) == "journalctl -u nginx -n 20 --no-pager"
 
 
+def test_logs_command_rejects_non_positive_lines():
+    for bad in (0, -1):
+        with pytest.raises(InvalidArgument):
+            services.logs_command("nginx", bad)
+
+
+def test_docker_logs_command_rejects_non_positive_lines():
+    with pytest.raises(InvalidArgument):
+        docker_actions.docker_logs_command("web-nginx", 0)
+
+
 def test_parse_upgradable():
     packages = updates.parse_upgradable(
         (FIXTURES / "apt_upgradable.txt").read_text(encoding="utf-8")

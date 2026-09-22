@@ -1,4 +1,5 @@
 import functools
+import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -7,6 +8,8 @@ from bot.config import AppConfig
 from bot.handlers.common import run_command
 from bot.security import ConfirmationStore
 from bot.ssh.pool import SshPool
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -32,6 +35,12 @@ async def cb_confirm(
         await callback.answer("Сервер не найден", show_alert=True)
         return
     await callback.answer("Выполняю…")
+    logger.info(
+        "audit: user=%s server=%s command=%s",
+        callback.from_user.id,
+        action.server_id,
+        action.command,
+    )
     await run_command(
         pool,
         server,
@@ -45,5 +54,8 @@ async def cb_confirm(
 async def cb_cancel(callback: CallbackQuery, confirmations: ConfirmationStore) -> None:
     token = callback.data.split(":", 1)[1]
     confirmations.take(callback.from_user.id, token)
-    await callback.message.edit_text("❌ Отменено")
+    try:
+        await callback.message.edit_text("❌ Отменено")
+    except Exception:
+        pass
     await callback.answer()
