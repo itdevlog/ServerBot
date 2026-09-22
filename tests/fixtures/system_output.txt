@@ -15,9 +15,7 @@ Cached:           300000 kB
 ###DF
 Filesystem     1024-blocks    Used Available Capacity Mounted on
 /dev/vda1        8240832 4120416   3700000      53% /
-###TOP
-top - 10:00:00 up 1 day,  1:00,  1 user,  load average: 0.15, 0.20, 0.25
-Tasks: 123 total,   1 running, 122 sleeping,   0 stopped,   0 zombie
-%Cpu(s):  5.0 us,  2.0 sy,  0.0 ni, 92.5 id,  0.5 wa,  0.0 hi,  0.0 si,  0.0 st
-MiB Mem :   2000.0 total,    488.3 free,    900.0 used,    611.7 buff/cache
-MiB Swap:      0.0 total,      0.0 free,      0.0 used.   1000.0 avail Mem
+###CPU1
+cpu  100 0 100 800 0 0 0 0 0 0
+###CPU2
+cpu  200 0 200 1600 0 0 0 0 0 0

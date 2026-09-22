@@ -6,6 +6,7 @@ from bot.collectors.system import (
     CollectorError,
     SYSTEM_COMMAND,
     collect_system,
+    parse_cpu_stat,
     parse_system_output,
 )
 from bot.config import ServerConfig
@@ -23,7 +24,26 @@ def test_parses_hostname():
 
 
 def test_parses_cpu_percent():
-    assert parse_fixture().cpu_percent == 7.5
+    assert parse_fixture().cpu_percent == 20.0
+
+
+def test_parse_cpu_stat_is_locale_independent():
+    first = "cpu  100 0 100 800 0 0 0 0 0 0"
+    second = "cpu  200 0 200 1600 0 0 0 0 0 0"
+
+    assert parse_cpu_stat(first, second) == 20.0
+
+
+def test_parse_cpu_stat_raises_on_zero_delta():
+    line = "cpu  100 0 100 800 0 0 0 0 0 0"
+
+    with pytest.raises(CollectorError):
+        parse_cpu_stat(line, line)
+
+
+def test_parse_cpu_stat_raises_on_missing_values():
+    with pytest.raises(CollectorError):
+        parse_cpu_stat("cpu  1 2 3", "cpu  1 2 3")
 
 
 def test_parses_ram_percent():

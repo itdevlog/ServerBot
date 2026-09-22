@@ -37,11 +37,12 @@ SYSTEM_COMMAND = (
     "echo '###UPTIME'; cat /proc/uptime; "
     "echo '###MEM'; cat /proc/meminfo; "
     "echo '###DF'; df -P /; "
-    "echo '###TOP'; top -bn1 2>/dev/null | head -n 5"
+    "echo '###CPU1'; grep '^cpu ' /proc/stat; "
+    "sleep 1; "
+    "echo '###CPU2'; grep '^cpu ' /proc/stat"
 )
 
-_SECTION_RE = re.compile(r"^###([A-Z]+)$")
-_CPU_IDLE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*id")
+_SECTION_RE = re.compile(r"^###([A-Z0-9]+)$")
 
 
 def _split_sections(text: str) -> dict[str, str]:
@@ -65,13 +66,26 @@ def _require(sections: dict[str, str], name: str) -> str:
     return value
 
 
-def parse_cpu_percent(top_section: str) -> float:
-    for line in top_section.splitlines():
-        if "Cpu(s)" in line or line.startswith("%Cpu"):
-            match = _CPU_IDLE_RE.search(line)
-            if match:
-                return round(100.0 - float(match.group(1)), 1)
-    raise CollectorError("Cannot parse CPU usage")
+def _cpu_values(line: str) -> list[int]:
+    columns = line.split()
+    if not columns or columns[0] != "cpu" or len(columns) < 5:
+        raise CollectorError("Cannot parse /proc/stat")
+    try:
+        return [int(column) for column in columns[1:]]
+    except ValueError as exc:
+        raise CollectorError("Cannot parse /proc/stat") from exc
+
+
+def parse_cpu_stat(first: str, second: str) -> float:
+    values_first = _cpu_values(first)
+    values_second = _cpu_values(second)
+    total_delta = sum(values_second) - sum(values_first)
+    idle_delta = (values_second[3] + values_second[4]) - (
+        values_first[3] + values_first[4]
+    )
+    if total_delta <= 0:
+        raise CollectorError("Cannot compute CPU usage from /proc/stat")
+    return round((1.0 - idle_delta / total_delta) * 100.0, 1)
 
 
 def parse_meminfo(mem_section: str) -> float:
@@ -120,7 +134,9 @@ def parse_system_output(text: str) -> SystemMetrics:
     cpu_count = int(_require(sections, "NPROC").split()[0])
     return SystemMetrics(
         hostname=_require(sections, "HOST").splitlines()[0].strip(),
-        cpu_percent=parse_cpu_percent(_require(sections, "TOP")),
+        cpu_percent=parse_cpu_stat(
+            _require(sections, "CPU1"), _require(sections, "CPU2")
+        ),
         ram_percent=parse_meminfo(_require(sections, "MEM")),
         disk_percent=parse_df(_require(sections, "DF")),
         load1=load1,
