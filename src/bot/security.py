@@ -26,7 +26,14 @@ class ConfirmationStore:
         self._clock = clock
         self._pending: dict[str, PendingAction] = {}
 
+    def _sweep(self) -> None:
+        now = self._clock()
+        expired = [token for token, item in self._pending.items() if item.expires_at < now]
+        for token in expired:
+            del self._pending[token]
+
     def create(self, user_id: int, action: PreparedAction) -> str:
+        self._sweep()
         token = secrets.token_hex(4)
         self._pending[token] = PendingAction(
             user_id=user_id,
@@ -34,6 +41,10 @@ class ConfirmationStore:
             expires_at=self._clock() + self._ttl,
         )
         return token
+
+    def pending_count(self) -> int:
+        self._sweep()
+        return len(self._pending)
 
     def take(self, user_id: int, token: str) -> PreparedAction | None:
         item = self._pending.pop(token, None)

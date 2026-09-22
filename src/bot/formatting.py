@@ -31,9 +31,12 @@ def format_duration(seconds: float) -> str:
 
 
 def format_metrics(server: ServerConfig, metrics: SystemMetrics) -> str:
+    name = html.escape(server.name)
+    host = html.escape(server.host)
+    hostname = html.escape(metrics.hostname)
     return (
-        f"📊 <b>{server.name}</b> ({server.host})\n"
-        f"hostname: {metrics.hostname}\n"
+        f"📊 <b>{name}</b> ({host})\n"
+        f"hostname: {hostname}\n"
         f"CPU: {metrics.cpu_percent:.1f}% (ядер: {metrics.cpu_count})\n"
         f"RAM: {metrics.ram_percent:.1f}%\n"
         f"Диск /: {metrics.disk_percent:.0f}%\n"
@@ -43,11 +46,17 @@ def format_metrics(server: ServerConfig, metrics: SystemMetrics) -> str:
 
 
 def format_alert(event: AlertEvent, server: ServerConfig) -> str:
+    name = html.escape(server.name)
     if event.kind == "resolve":
-        return f"🟢 <b>{server.name}</b>: {event.problem} в норме"
+        return f"🟢 <b>{name}</b>: {event.problem} в норме"
     if event.problem == "offline":
-        return f"🔴 <b>{server.name}</b>: сервер недоступен"
-    return f"🟠 <b>{server.name}</b>: {event.detail}"
+        return f"🔴 <b>{name}</b>: сервер недоступен"
+    return f"🟠 <b>{name}</b>: {html.escape(event.detail)}"
+
+
+def confirm_prompt(template: str, server: ServerConfig, command: str) -> str:
+    header = template.format(name=f"<b>{html.escape(server.name)}</b>")
+    return f"{header}\n<code>{html.escape(command)}</code>"
 
 
 def format_command_result(result: CommandResult, max_lines: int) -> str:

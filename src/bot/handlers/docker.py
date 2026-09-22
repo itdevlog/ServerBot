@@ -8,6 +8,7 @@ from bot.actions.base import InvalidArgument
 from bot.actions.docker import docker_logs_command, docker_restart_action
 from bot.collectors.docker import CollectorError, collect_docker
 from bot.config import AppConfig
+from bot.formatting import confirm_prompt
 from bot.handlers.common import MenuState, run_command
 from bot.keyboards import confirm_keyboard, docker_keyboard
 from bot.security import ConfirmationStore
@@ -49,7 +50,7 @@ async def cb_dlog(
     data = await state.get_data()
     names = data.get("containers", [])
     server = config.server(data.get("server_id", ""))
-    if server is None or index >= len(names):
+    if server is None or not 0 <= index < len(names):
         await callback.answer("Список устарел", show_alert=True)
         return
     await run_command(
@@ -73,7 +74,7 @@ async def cb_drestart(
     data = await state.get_data()
     names = data.get("containers", [])
     server = config.server(data.get("server_id", ""))
-    if server is None or index >= len(names):
+    if server is None or not 0 <= index < len(names):
         await callback.answer("Список устарел", show_alert=True)
         return
     try:
@@ -83,7 +84,7 @@ async def cb_drestart(
         return
     token = confirmations.create(callback.from_user.id, action)
     await callback.message.answer(
-        f"Выполнить на <b>{server.name}</b>:\n<code>{action.command}</code>",
+        confirm_prompt("Выполнить на {name}:", server, action.command),
         reply_markup=confirm_keyboard(token),
         parse_mode="HTML",
     )

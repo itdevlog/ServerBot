@@ -11,6 +11,10 @@ ExecStart=/opt/management/.venv/bin/python -m bot.main
 Restart=on-failure
 RestartSec=5
 User=management
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
 
 [Install]
 WantedBy=multi-user.target

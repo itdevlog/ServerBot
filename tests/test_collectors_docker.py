@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from bot.collectors.docker import (
     DOCKER_PS_COMMAND,
     collect_docker,

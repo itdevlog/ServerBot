@@ -78,3 +78,24 @@ servers:
 """
     with pytest.raises(ValueError, match="key_path"):
         load_config(write(tmp_path, text), {})
+
+
+def test_max_concurrency_must_be_positive(tmp_path):
+    text = """
+telegram: { token: t, allowed_users: [1] }
+defaults: { ssh: { max_concurrency: 0 } }
+servers: []
+"""
+    with pytest.raises(ValueError):
+        load_config(write(tmp_path, text), {})
+
+
+def test_duplicate_server_ids_are_rejected(tmp_path):
+    text = """
+telegram: { token: t, allowed_users: [1] }
+servers:
+  - { id: a, name: a1, host: h1, user: u, auth: { type: password, password: p } }
+  - { id: a, name: a2, host: h2, user: u, auth: { type: password, password: p } }
+"""
+    with pytest.raises(ValueError, match="duplicate server id"):
+        load_config(write(tmp_path, text), {})

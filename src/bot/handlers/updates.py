@@ -8,6 +8,7 @@ from bot.actions.updates import (
     upgrade_action,
 )
 from bot.config import AppConfig
+from bot.formatting import confirm_prompt
 from bot.keyboards import confirm_keyboard
 from bot.security import ConfirmationStore
 from bot.ssh.pool import ServerUnavailable, SshPool
@@ -54,7 +55,7 @@ async def cb_upgrade(
     action = upgrade_action(server)
     token = confirmations.create(callback.from_user.id, action)
     await callback.message.answer(
-        f"Обновить пакеты на <b>{server.name}</b>?\n<code>{action.command}</code>",
+        confirm_prompt("Обновить пакеты на {name}?", server, action.command),
         reply_markup=confirm_keyboard(token),
         parse_mode="HTML",
     )
@@ -73,7 +74,7 @@ async def cb_reboot(
     action = reboot_action(server)
     token = confirmations.create(callback.from_user.id, action)
     await callback.message.answer(
-        f"Перезагрузить <b>{server.name}</b>?\n<code>{action.command}</code>",
+        confirm_prompt("Перезагрузить {name}?", server, action.command),
         reply_markup=confirm_keyboard(token),
         parse_mode="HTML",
     )

@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Literal, Mapping
+from collections.abc import Mapping
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -55,7 +56,7 @@ class ServerConfig(BaseModel):
 class SshDefaults(BaseModel):
     connect_timeout: int = 10
     command_timeout: int = 30
-    max_concurrency: int = 8
+    max_concurrency: int = Field(default=8, gt=0)
 
 
 class Defaults(BaseModel):
@@ -88,6 +89,15 @@ class AppConfig(BaseModel):
     defaults: Defaults = Field(default_factory=Defaults)
     alerts: AlertsConfig = Field(default_factory=AlertsConfig)
     servers: list[ServerConfig]
+
+    @model_validator(mode="after")
+    def _unique_server_ids(self) -> "AppConfig":
+        seen: set[str] = set()
+        for server in self.servers:
+            if server.id in seen:
+                raise ValueError(f"duplicate server id: {server.id}")
+            seen.add(server.id)
+        return self
 
     def server(self, server_id: str) -> ServerConfig | None:
         for server in self.servers:

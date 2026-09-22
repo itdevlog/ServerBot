@@ -49,6 +49,16 @@ def test_confirmation_expires():
     assert store.take(1, token) is None
 
 
+def test_store_sweeps_expired_entries_on_create():
+    clock = FakeClock()
+    store = ConfirmationStore(ttl=60.0, clock=clock)
+    store.create(1, ACTION)
+    clock.now = 100.0
+    store.create(2, ACTION)
+
+    assert store.pending_count() == 1
+
+
 def test_confirmation_unknown_token():
     store = ConfirmationStore(clock=FakeClock())
 

@@ -77,6 +77,15 @@ def test_parse_upgradable():
     assert packages == ["nginx", "openssl"]
 
 
+def test_parse_upgradable_ignores_url_like_lines():
+    text = (
+        "https://example.com/foo bar baz\n"
+        "nginx/jammy-updates 1.18.0 amd64 [upgradable from: 1.18.0]\n"
+    )
+
+    assert updates.parse_upgradable(text) == ["nginx"]
+
+
 def test_upgrade_action_is_dangerous():
     action = updates.upgrade_action(make_server())
 

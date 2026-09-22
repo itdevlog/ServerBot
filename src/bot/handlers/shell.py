@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import html
-
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -9,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.actions.shell import shell_action
 from bot.config import AppConfig
+from bot.formatting import confirm_prompt
 from bot.handlers.common import ShellState
 from bot.keyboards import confirm_keyboard
 from bot.security import ConfirmationStore
@@ -61,7 +60,7 @@ async def on_shell_command(
     action = shell_action(server, message.text or "")
     token = confirmations.create(message.from_user.id, action)
     await message.answer(
-        f"Выполнить на <b>{server.name}</b>:\n<code>{html.escape(action.command)}</code>",
+        confirm_prompt("Выполнить на {name}:", server, action.command),
         reply_markup=confirm_keyboard(token),
         parse_mode="HTML",
     )

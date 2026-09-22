@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from bot.actions.base import InvalidArgument, PreparedAction, validate_token
+from bot.actions.base import InvalidArgument, PreparedAction
 from bot.config import ServerConfig
 
 _UNIT_RE = re.compile(r"[A-Za-z0-9@_.-]+")

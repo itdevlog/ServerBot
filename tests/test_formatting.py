@@ -2,6 +2,7 @@ from bot.alerts.engine import AlertEvent
 from bot.collectors.system import SystemMetrics
 from bot.config import ServerConfig
 from bot.formatting import (
+    confirm_prompt,
     format_alert,
     format_command_result,
     format_duration,
@@ -16,6 +17,16 @@ def make_server() -> ServerConfig:
         id="web1",
         name="Web 1",
         host="1.2.3.4",
+        user="admin",
+        auth={"type": "password", "password": "secret"},
+    )
+
+
+def make_unsafe_server() -> ServerConfig:
+    return ServerConfig(
+        id="x",
+        name="A<B>&C",
+        host="h<1>",
         user="admin",
         auth={"type": "password", "password": "secret"},
     )
@@ -80,3 +91,35 @@ def test_format_command_result_escapes_and_truncates():
     assert "a" in text
     assert "код: 0" in text
     assert "усечено" in text
+
+
+def test_format_metrics_escapes_config_values():
+    metrics = SystemMetrics("<host>", 1.0, 2.0, 3.0, 0.1, 0.1, 0.1, 2, 10.0)
+    text = format_metrics(make_unsafe_server(), metrics)
+
+    assert "A&lt;B&gt;&amp;C" in text
+    assert "h&lt;1&gt;" in text
+    assert "&lt;host&gt;" in text
+    assert "<B>" not in text
+
+
+def test_format_alert_escapes_detail():
+    event = AlertEvent("web1", "cpu", "enter", "CPU <b>95%</b>")
+    text = format_alert(event, make_server())
+
+    assert "&lt;b&gt;95%&lt;/b&gt;" in text
+
+
+def test_format_alert_escapes_server_name():
+    event = AlertEvent("web1", "cpu", "enter", "CPU 95%")
+    text = format_alert(event, make_unsafe_server())
+
+    assert "A&lt;B&gt;&amp;C" in text
+
+
+def test_confirm_prompt_escapes_name_and_command():
+    text = confirm_prompt("Выполнить на {name}:", make_unsafe_server(), "echo <hi>")
+
+    assert "A&lt;B&gt;&amp;C" in text
+    assert "&lt;hi&gt;" in text
+    assert "<hi>" not in text
