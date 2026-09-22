@@ -57,17 +57,28 @@ pytest -v
 ## Деплой через systemd
 
 ```bash
-sudo useradd --system --home /opt/management management
+sudo useradd --system --home /opt/management --create-home management
 sudo mkdir -p /opt/management
 sudo cp -r src pyproject.toml config.example.yaml /opt/management/
 sudo cp config.yaml /opt/management/
 sudo cp deploy/management-bot.service /etc/systemd/system/
+sudo chown -R management:management /opt/management
 sudo chmod 600 /opt/management/config.yaml
 sudo -u management python3.11 -m venv /opt/management/.venv
 sudo -u management /opt/management/.venv/bin/pip install /opt/management
+sudo tee /opt/management/bot.env >/dev/null <<'EOF'
+TG_BOT_TOKEN=...
+WEB1_PASS=...
+DB1_PASSPHRASE=...
+EOF
+sudo chown management:management /opt/management/bot.env
+sudo chmod 600 /opt/management/bot.env
 sudo systemctl daemon-reload
 sudo systemctl enable --now management-bot
 ```
 
-`/opt/management/bot.env` — файл с секретами в формате `KEY=value`,
-доступный только пользователю `management` (chmod 600).
+`/opt/management/bot.env` — файл с секретами в формате `KEY=value`
+(`TG_BOT_TOKEN`, `WEB1_PASS`, `DB1_PASSPHRASE`), владелец `management`,
+права `chmod 600`. Юнит читает его через `EnvironmentFile`. Файлы
+`/opt/management` принадлежат пользователю `management`, поэтому сервис
+под `User=management` может читать `config.yaml` и `bot.env`.
