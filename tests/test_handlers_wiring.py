@@ -19,7 +19,7 @@ class FakeMessage:
     def __init__(self) -> None:
         self.answers: list[tuple[str, object]] = []
 
-    async def answer(self, text, reply_markup=None) -> None:
+    async def answer(self, text, reply_markup=None, **kwargs) -> None:
         self.answers.append((text, reply_markup))
 
 
@@ -81,6 +81,58 @@ class FakeState:
 
     async def clear(self) -> None:
         self.cleared = True
+
+
+class FakeUser:
+    def __init__(self, user_id: int) -> None:
+        self.id = user_id
+
+
+class FakePool:
+    def __init__(self) -> None:
+        self.commands: list[str] = []
+
+    async def run(self, server, command, timeout=None):
+        from bot.ssh.pool import CommandResult
+
+        self.commands.append(command)
+        return CommandResult("done", "", 0, 0.1)
+
+
+async def test_unit_start_runs_without_confirmation():
+    from bot.handlers import services as services_module
+    from bot.security import ConfirmationStore
+
+    callback = FakeCallback("unitact:start:0")
+    callback.from_user = FakeUser(1)
+    state = FakeState({"server_id": "web1", "units": ["nginx"]})
+    pool = FakePool()
+    confirmations = ConfirmationStore()
+
+    await services_module.cb_unitact(
+        callback, state, make_config(), confirmations, pool
+    )
+
+    assert pool.commands == ["systemctl start nginx"]
+    assert confirmations.pending_count() == 0
+
+
+async def test_unit_restart_requires_confirmation():
+    from bot.handlers import services as services_module
+    from bot.security import ConfirmationStore
+
+    callback = FakeCallback("unitact:restart:0")
+    callback.from_user = FakeUser(1)
+    state = FakeState({"server_id": "web1", "units": ["nginx"]})
+    pool = FakePool()
+    confirmations = ConfirmationStore()
+
+    await services_module.cb_unitact(
+        callback, state, make_config(), confirmations, pool
+    )
+
+    assert pool.commands == []
+    assert confirmations.pending_count() == 1
 
 
 async def test_shell_empty_command_is_rejected():

@@ -61,6 +61,7 @@ async def cb_unitact(
     state: FSMContext,
     config: AppConfig,
     confirmations: ConfirmationStore,
+    pool: SshPool,
 ) -> None:
     parts = callback.data.split(":")
     verb, raw_index = parts[1], int(parts[2])
@@ -74,6 +75,16 @@ async def cb_unitact(
         action = service_action(server, units[raw_index], verb)
     except InvalidArgument as exc:
         await callback.answer(str(exc), show_alert=True)
+        return
+    if not action.dangerous:
+        await callback.answer("Выполняю…")
+        await run_command(
+            pool,
+            server,
+            action.command,
+            config.defaults.output_max_lines,
+            functools.partial(callback.message.answer, parse_mode="HTML"),
+        )
         return
     token = confirmations.create(callback.from_user.id, action)
     await callback.message.answer(
