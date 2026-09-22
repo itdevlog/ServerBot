@@ -44,6 +44,55 @@ cp config.example.yaml config.yaml && chmod 600 config.yaml
 cp bot.env.example bot.env && chmod 600 bot.env
 ```
 
+### Как заполнить `config.yaml`
+
+Вход по паролю аккаунта:
+
+```yaml
+servers:
+  - id: web1
+    name: "Web 1"
+    host: 192.168.1.116
+    port: 22
+    user: root
+    auth:
+      type: password
+      password: "${ROOT4}"
+    tags: [ai, agent]
+```
+
+Вход по SSH-ключу (с парольной фразой):
+
+```yaml
+servers:
+  - id: web1
+    name: "Web 1"
+    host: 192.168.1.116
+    port: 22
+    user: root
+    auth:
+      type: key
+      key_path: "~/.ssh/id_ed25519"
+      passphrase: "${ROOT4}"
+    tags: [ai, agent]
+```
+
+Правила:
+
+- `id` — уникальный, используется в командах (`/status <id>`) и кнопках;
+  дубликаты запрещены.
+- `auth.type` — `password` или `key`:
+  - `password` — обязателен `password`;
+  - `key` — обязателен `key_path`; `passphrase` нужен только если ключ
+    зашифрован, иначе строку опустите.
+- `key_path` раскрывает `~` в домашний каталог пользователя, под которым
+  запущен бот; файл ключа должен быть ему читаем.
+- Одна запись — один способ входа. «Ключ **и** пароль аккаунта»
+  одновременно не поддерживается: нужен либо ключ (с passphrase), либо пароль.
+- Секреты не пишите в `config.yaml` — только ссылки `${ENV}`, а значения —
+  в `bot.env`.
+- `tags` — произвольные метки, необязательны.
+
 ## Установка одной командой
 
 На чистом Debian VPS (нужны `git` и доступ к репозиторию):
