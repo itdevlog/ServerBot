@@ -121,6 +121,27 @@ async def test_key_auth_passes_client_keys(monkeypatch):
     assert captured["passphrase"] == "k"
 
 
+async def test_evicted_connection_is_closed_on_command_failure(monkeypatch):
+    conn = FakeConn()
+
+    async def failing_run(command: str, check: bool = False):
+        raise OSError("command failed")
+
+    conn.run = failing_run
+
+    async def fake_connect(**kwargs):
+        return conn
+
+    monkeypatch.setattr(asyncssh, "connect", fake_connect)
+    pool = SshPool(SshDefaults())
+
+    with pytest.raises(ServerUnavailable, match="command failed"):
+        await pool.run(make_server(), "x")
+
+    assert conn.closed is True
+    assert make_server().id not in pool._connections
+
+
 async def test_aclose_closes_cached_connections(monkeypatch):
     conn = FakeConn()
 

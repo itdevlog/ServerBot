@@ -60,7 +60,9 @@ class SshPool:
             connection = await self._get_connection(server)
             result = await asyncio.wait_for(connection.run(command, check=False), limit)
         except (asyncssh.Error, OSError, asyncio.TimeoutError) as exc:
-            self._connections.pop(server.id, None)
+            connection = self._connections.pop(server.id, None)
+            if connection is not None:
+                connection.close()
             raise ServerUnavailable(str(exc)) from exc
         duration = time.monotonic() - started
         return CommandResult(
