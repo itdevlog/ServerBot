@@ -44,7 +44,28 @@ cp config.example.yaml config.yaml && chmod 600 config.yaml
 cp bot.env.example bot.env && chmod 600 bot.env
 ```
 
+## Установка одной командой
+
+На чистом Debian VPS (нужны `git` и доступ к репозиторию):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/itdevlog/ServerBot/master/manage.sh | bash -s -- install
+```
+
+Скрипт клонирует репозиторий в `/opt/serverbot` и запускает `install`:
+venv, зависимости, systemd-юнит, автозапуск. Без терминала `bot.env`
+копируется из `bot.env.example`; после установки впишите `TG_BOT_TOKEN`
+и секреты серверов, создайте `config.yaml` и выполните `./manage.sh restart`.
+
+> Репозиторий `itdevlog/ServerBot` **приватный**: `curl` и `git clone`
+> требуют авторизации. Чтобы команда выше работала как есть, сделайте
+> репозиторий публичным (`gh repo edit itdevlog/ServerBot --visibility public`)
+> либо клонируйте вручную с настроенными credentials и запустите
+> `./manage.sh install`.
+
 ## Быстрый старт
+
+Если репозиторий уже склонирован:
 
 ```bash
 ./manage.sh install
