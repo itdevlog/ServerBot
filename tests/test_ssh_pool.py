@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 import asyncssh
@@ -154,3 +155,30 @@ async def test_aclose_closes_cached_connections(monkeypatch):
     await pool.aclose()
 
     assert conn.closed is True
+
+
+async def test_run_respects_max_concurrency(monkeypatch):
+    active = 0
+    peak = 0
+
+    class SlowConn(FakeConn):
+        async def run(self, command: str, check: bool = False) -> FakeResult:
+            nonlocal active, peak
+            active += 1
+            peak = max(peak, active)
+            await asyncio.sleep(0.01)
+            active -= 1
+            return FakeResult("ok", "", 0)
+
+    conn = SlowConn()
+
+    async def fake_connect(**kwargs):
+        return conn
+
+    monkeypatch.setattr(asyncssh, "connect", fake_connect)
+    pool = SshPool(SshDefaults(max_concurrency=2))
+    servers = [make_server(f"s{i}") for i in range(6)]
+
+    await asyncio.gather(*(pool.run(server, "x") for server in servers))
+
+    assert peak <= 2

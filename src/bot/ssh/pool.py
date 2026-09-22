@@ -26,6 +26,7 @@ class SshPool:
     def __init__(self, defaults: SshDefaults) -> None:
         self._defaults = defaults
         self._connections: dict[str, asyncssh.SSHClientConnection] = {}
+        self._semaphore = asyncio.Semaphore(defaults.max_concurrency)
 
     async def _connect(self, server: ServerConfig):
         kwargs = {
@@ -56,14 +57,15 @@ class SshPool:
     ) -> CommandResult:
         limit = timeout if timeout is not None else self._defaults.command_timeout
         started = time.monotonic()
-        try:
-            connection = await self._get_connection(server)
-            result = await asyncio.wait_for(connection.run(command, check=False), limit)
-        except (asyncssh.Error, OSError, asyncio.TimeoutError) as exc:
-            connection = self._connections.pop(server.id, None)
-            if connection is not None:
-                connection.close()
-            raise ServerUnavailable(str(exc)) from exc
+        async with self._semaphore:
+            try:
+                connection = await self._get_connection(server)
+                result = await asyncio.wait_for(connection.run(command, check=False), limit)
+            except (asyncssh.Error, OSError, asyncio.TimeoutError) as exc:
+                connection = self._connections.pop(server.id, None)
+                if connection is not None:
+                    connection.close()
+                raise ServerUnavailable(str(exc)) from exc
         duration = time.monotonic() - started
         return CommandResult(
             stdout=result.stdout or "",

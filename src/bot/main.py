@@ -6,7 +6,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from bot.alerts.engine import AlertEngine, AlertRuntime
+from bot.alerts.engine import AlertEngine, AlertEvent, AlertRuntime
 from bot.collectors.system import CollectorError, collect_system
 from bot.config import AppConfig, load_config
 from bot.formatting import format_alert
@@ -58,6 +58,17 @@ def build_dispatcher(
     return dispatcher
 
 
+async def _poll_server(
+    pool: SshPool, server, engine: AlertEngine
+) -> list[AlertEvent]:
+    try:
+        metrics = await collect_system(pool, server)
+    except (ServerUnavailable, CollectorError) as exc:
+        logger.warning("Poll failed for %s: %s", server.id, exc)
+        return engine.evaluate_offline(server.id)
+    return engine.mark_online(server.id) + engine.evaluate(server.id, metrics)
+
+
 async def poll_and_alert(
     bot: Bot,
     config: AppConfig,
@@ -67,18 +78,21 @@ async def poll_and_alert(
 ) -> None:
     if not runtime.enabled:
         return
-    for server in config.servers:
-        try:
-            metrics = await collect_system(pool, server)
-        except (ServerUnavailable, CollectorError) as exc:
-            logger.warning("Poll failed for %s: %s", server.id, exc)
-            events = engine.evaluate_offline(server.id)
-        else:
-            events = engine.mark_online(server.id) + engine.evaluate(server.id, metrics)
-        for event in events:
+    results = await asyncio.gather(
+        *(_poll_server(pool, server, engine) for server in config.servers),
+        return_exceptions=True,
+    )
+    for server, result in zip(config.servers, results):
+        if isinstance(result, BaseException):
+            logger.warning("Poll task failed for %s: %s", server.id, result)
+            continue
+        for event in result:
             message = format_alert(event, server)
             for user_id in config.telegram.allowed_users:
-                await bot.send_message(user_id, message, parse_mode="HTML")
+                try:
+                    await bot.send_message(user_id, message, parse_mode="HTML")
+                except Exception as exc:
+                    logger.warning("Failed to send alert to %s: %s", user_id, exc)
 
 
 async def run(config: AppConfig) -> None:

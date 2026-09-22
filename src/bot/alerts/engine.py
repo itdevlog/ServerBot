@@ -73,4 +73,10 @@ class AlertEngine:
         )
 
     def mark_online(self, server_id: str) -> list[AlertEvent]:
-        return self._transition(server_id, {}, self._clock())
+        previous = self._active.get(server_id, set())
+        if "offline" not in previous:
+            return []
+        new_active = set(previous)
+        new_active.discard("offline")
+        self._active[server_id] = new_active
+        return [AlertEvent(server_id, "offline", "resolve", "")]

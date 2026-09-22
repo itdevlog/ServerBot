@@ -90,3 +90,32 @@ def test_offline_disabled_returns_empty():
     )
 
     assert engine.evaluate_offline("web1") == []
+
+
+def test_mark_online_preserves_metric_problems():
+    clock = FakeClock()
+    engine = make_engine(clock=clock, cooldown=300)
+    assert [e.problem for e in engine.evaluate("web1", metrics(cpu=95))] == ["cpu"]
+
+    clock.now = 30
+    assert engine.mark_online("web1") == []
+    assert engine.evaluate("web1", metrics(cpu=96)) == []
+    assert engine._active["web1"] == {"cpu"}
+
+
+def test_sustained_breach_never_resolves_across_mark_online_ticks():
+    clock = FakeClock()
+    engine = make_engine(clock=clock, cooldown=300)
+    engine.evaluate("web1", metrics(cpu=95))
+
+    for tick in range(1, 5):
+        clock.now = tick * 60
+        assert engine.mark_online("web1") == []
+        events = engine.evaluate("web1", metrics(cpu=96))
+        assert [e.kind for e in events] == []
+
+
+def test_mark_online_without_offline_returns_empty():
+    engine = make_engine()
+
+    assert engine.mark_online("web1") == []

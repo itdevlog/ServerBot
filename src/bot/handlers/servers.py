@@ -1,11 +1,12 @@
-from aiogram import Router
+import asyncio
+from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
-from bot.collectors.system import CollectorError, collect_system
+from bot.collectors.system import collect_system
 from bot.config import AppConfig
-from bot.keyboards import servers_keyboard
-from bot.ssh.pool import ServerUnavailable, SshPool
+from bot.keyboards import server_menu_keyboard, servers_keyboard
+from bot.ssh.pool import SshPool
 
 router = Router()
 
@@ -17,15 +18,29 @@ async def cmd_servers(message: Message, config: AppConfig) -> None:
 
 @router.message(Command("statusall"))
 async def cmd_statusall(message: Message, config: AppConfig, pool: SshPool) -> None:
+    results = await asyncio.gather(
+        *(collect_system(pool, server) for server in config.servers),
+        return_exceptions=True,
+    )
     lines = []
-    for server in config.servers:
-        try:
-            metrics = await collect_system(pool, server)
-        except (ServerUnavailable, CollectorError) as exc:
-            lines.append(f"🔴 {server.name}: недоступен ({exc})")
+    for server, result in zip(config.servers, results):
+        if isinstance(result, BaseException):
+            lines.append(f"🔴 {server.name}: недоступен ({result})")
             continue
         lines.append(
-            f"🟢 {server.name}: CPU {metrics.cpu_percent:.0f}% "
-            f"RAM {metrics.ram_percent:.0f}% Диск {metrics.disk_percent:.0f}%"
+            f"🟢 {server.name}: CPU {result.cpu_percent:.0f}% "
+            f"RAM {result.ram_percent:.0f}% Диск {result.disk_percent:.0f}%"
         )
     await message.answer("\n".join(lines))
+
+
+@router.callback_query(F.data.startswith("menu:"))
+async def cb_menu(callback: CallbackQuery, config: AppConfig) -> None:
+    server = config.server(callback.data.split(":", 1)[1])
+    if server is None:
+        await callback.answer("Сервер не найден", show_alert=True)
+        return
+    await callback.message.answer(
+        server.name, reply_markup=server_menu_keyboard(server.id)
+    )
+    await callback.answer()

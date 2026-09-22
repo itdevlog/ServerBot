@@ -76,3 +76,22 @@ async def test_poll_and_alert_respects_disabled_runtime():
     await poll_and_alert(bot, config, pool, engine, AlertRuntime(enabled=False))
 
     assert bot.sent == []
+
+
+async def test_poll_and_alert_survives_send_failure():
+    config = make_config()
+    config.telegram.allowed_users = [1, 2]
+
+    class FlakyBot(FakeBot):
+        async def send_message(self, chat_id, text, parse_mode=None) -> None:
+            if chat_id == 1:
+                raise RuntimeError("blocked")
+            self.sent.append((chat_id, text))
+
+    bot = FlakyBot()
+    pool = FakePool(CommandResult(FIXTURE.read_text(encoding="utf-8"), "", 0, 0.1))
+    engine = AlertEngine(Thresholds(cpu_percent=1), 300.0)
+
+    await poll_and_alert(bot, config, pool, engine, AlertRuntime(enabled=True))
+
+    assert bot.sent == [(2, bot.sent[0][1])]
