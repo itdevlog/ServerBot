@@ -1,0 +1,9 @@
+.superpowers/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.eggs/
+*.egg-info/
+config.yaml
+bot.env
