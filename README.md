@@ -1,4 +1,4 @@
-# Telegram VPS Manager
+# ServerBot
 
 Телеграм-бот для управления парком Debian VPS с центрального сервера по SSH:
 мониторинг, управление сервисами, обновления и reboot, Docker, shell и алерты.
@@ -29,60 +29,58 @@
 - SSH-пользователь должен иметь права на `systemctl`, `apt-get` и `reboot`
   (обычно root или passwordless sudo).
 
-## Установка
+## Конфигурация
+
+- `config.yaml` — инвентарь серверов и пороги алертов. Создаётся из
+  `config.example.yaml`, в git не хранится. Секреты в нём — ссылки `${ENV}`.
+- `bot.env` — секреты (`TG_BOT_TOKEN` и значения под `${...}` из `config.yaml`).
+  Создаётся из `bot.env.example`, в git не хранится.
+
+Бот читает `bot.env` при старте и подставляет недостающие переменные
+окружения, поэтому systemd-юнит `manage.sh` работает без `EnvironmentFile`.
 
 ```bash
-python3.11 -m venv .venv
-. .venv/bin/activate
-pip install -e ".[dev]"
-cp config.example.yaml config.yaml
-chmod 600 config.yaml
+cp config.example.yaml config.yaml && chmod 600 config.yaml
+cp bot.env.example bot.env && chmod 600 bot.env
 ```
 
-Заполните `config.yaml`: токен бота, свой Telegram-ID, список серверов.
-Секретные значения задайте переменными окружения (`TG_BOT_TOKEN`,
-`WEB1_PASS`, `DB1_PASSPHRASE`).
-
-## Запуск
+## Быстрый старт
 
 ```bash
-export TG_BOT_TOKEN=...
-export WEB1_PASS=...
-export DB1_PASSPHRASE=...
-python -m bot.main
+./manage.sh install
 ```
+
+`manage.sh` создаёт venv, ставит зависимости из `requirements.txt`, пишет
+systemd-юнит `serverbot-bot-<instance>` и включает автозапуск. Если токен в
+`bot.env` ещё не задан, сервис включается, но не запускается.
+
+## Управление
+
+`manage.sh` — единая точка эксплуатации (подробнее: `./manage.sh help`):
+
+| Команда | Назначение |
+|---|---|
+| `install` | venv, зависимости, systemd, автозапуск |
+| `update` | обновление с GitHub + бэкап + откат при сбое |
+| `doctor` | диагностика: venv, зависимости, env, сервис |
+| `backup` / `restore` | бэкап `bot.env` и `config.yaml` в `backups/` |
+| `start` / `stop` / `restart` / `status` | жизненный цикл сервиса |
+| `logs` | логи в реальном времени |
+| `uninstall` | остановка и удаление сервиса |
+
+Несколько ботов на одном сервере: имя инстанса задаётся `--instance ИМЯ`
+или переменной `SERVERBOT_INSTANCE`; каждому — свой systemd-юнит, PID и порт.
+
+## Ручной запуск (без systemd)
+
+```bash
+.venv/bin/python run.py
+```
+
+`run.py` — тонкий лончер, добавляющий `src` в `sys.path`.
 
 ## Тесты
 
 ```bash
-pytest -v
+.venv/bin/pytest -v
 ```
-
-## Деплой через systemd
-
-```bash
-sudo useradd --system --home /opt/management --create-home management
-sudo mkdir -p /opt/management
-sudo cp -r src pyproject.toml config.example.yaml /opt/management/
-sudo cp config.yaml /opt/management/
-sudo cp deploy/management-bot.service /etc/systemd/system/
-sudo chown -R management:management /opt/management
-sudo chmod 600 /opt/management/config.yaml
-sudo -u management python3.11 -m venv /opt/management/.venv
-sudo -u management /opt/management/.venv/bin/pip install /opt/management
-sudo tee /opt/management/bot.env >/dev/null <<'EOF'
-TG_BOT_TOKEN=...
-WEB1_PASS=...
-DB1_PASSPHRASE=...
-EOF
-sudo chown management:management /opt/management/bot.env
-sudo chmod 600 /opt/management/bot.env
-sudo systemctl daemon-reload
-sudo systemctl enable --now management-bot
-```
-
-`/opt/management/bot.env` — файл с секретами в формате `KEY=value`
-(`TG_BOT_TOKEN`, `WEB1_PASS`, `DB1_PASSPHRASE`), владелец `management`,
-права `chmod 600`. Юнит читает его через `EnvironmentFile`. Файлы
-`/opt/management` принадлежат пользователю `management`, поэтому сервис
-под `User=management` может читать `config.yaml` и `bot.env`.

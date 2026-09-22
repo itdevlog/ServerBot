@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bot.alerts.engine import AlertEngine, AlertEvent, AlertRuntime
 from bot.collectors.system import CollectorError, collect_system
 from bot.config import AppConfig, load_config
+from bot.env import load_env_file
 from bot.formatting import format_alert
 from bot.handlers import (
     alerts,
@@ -120,6 +121,7 @@ async def run(config: AppConfig) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
+    load_env_file()
     config = load_config("config.yaml")
     asyncio.run(run(config))
 

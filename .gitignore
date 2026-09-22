@@ -7,3 +7,7 @@ __pycache__/
 *.egg-info/
 config.yaml
 bot.env
+.env
+logs/
+backups/
+bot-backup-*.tar.gz
