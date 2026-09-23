@@ -31,9 +31,9 @@ class SystemMetrics:
 
 
 SYSTEM_COMMAND = (
-    "echo '###HOST'; hostname; "
+    "echo '###HOST'; (hostname 2>/dev/null || cat /proc/sys/kernel/hostname); "
     "echo '###LOAD'; cat /proc/loadavg; "
-    "echo '###NPROC'; nproc; "
+    "echo '###NPROC'; (nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo); "
     "echo '###UPTIME'; cat /proc/uptime; "
     "echo '###MEM'; cat /proc/meminfo; "
     "echo '###DF'; df -P /; "
@@ -64,6 +64,13 @@ def _require(sections: dict[str, str], name: str) -> str:
     if not value:
         raise CollectorError(f"Missing section {name} in system output")
     return value
+
+
+def _optional_hostname(sections: dict[str, str]) -> str:
+    lines = sections.get("HOST", "").splitlines()
+    if lines and lines[0].strip():
+        return lines[0].strip()
+    return "unknown"
 
 
 def _cpu_values(line: str) -> list[int]:
@@ -134,7 +141,7 @@ def parse_system_output(text: str) -> SystemMetrics:
         load1, load5, load15 = parse_loadavg(_require(sections, "LOAD"))
         cpu_count = int(_require(sections, "NPROC").split()[0])
         return SystemMetrics(
-            hostname=_require(sections, "HOST").splitlines()[0].strip(),
+            hostname=_optional_hostname(sections),
             cpu_percent=parse_cpu_stat(
                 _require(sections, "CPU1"), _require(sections, "CPU2")
             ),

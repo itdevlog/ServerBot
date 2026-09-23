@@ -64,9 +64,12 @@ async def _poll_server(
 ) -> list[AlertEvent]:
     try:
         metrics = await collect_system(pool, server)
-    except (ServerUnavailable, CollectorError) as exc:
+    except ServerUnavailable as exc:
         logger.warning("Poll failed for %s: %s", server.id, exc)
-        return engine.evaluate_offline(server.id)
+        return engine.record_failure(server.id)
+    except CollectorError as exc:
+        logger.warning("Metrics parse failed for %s: %s", server.id, exc)
+        return engine.mark_online(server.id)
     return engine.mark_online(server.id) + engine.evaluate(server.id, metrics)
 
 

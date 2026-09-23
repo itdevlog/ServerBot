@@ -43,8 +43,11 @@ def test_persisting_breach_does_not_repeat():
 
 
 def test_recovery_emits_resolve():
-    engine = make_engine()
+    clock = FakeClock()
+    engine = make_engine(clock=clock, cooldown=300)
+    clock.now = 1000
     engine.evaluate("web1", metrics(cpu=95))
+    clock.now = 1400
     events = engine.evaluate("web1", metrics(cpu=10))
 
     assert len(events) == 1
@@ -73,23 +76,70 @@ def test_cooldown_suppresses_reentry_then_allows():
     assert [e.kind for e in events] == ["enter"]
 
 
-def test_offline_enter_and_resolve():
-    engine = make_engine()
-    offline = engine.evaluate_offline("web1")
-    assert [e.problem for e in offline] == ["offline"]
-    assert offline[0].kind == "enter"
+def test_resolve_repeats_are_suppressed_by_cooldown():
+    clock = FakeClock()
+    engine = make_engine(clock=clock, cooldown=300)
+    clock.now = 1000
+    engine.evaluate("web1", metrics(cpu=95))
+    clock.now = 1400
+    assert [e.kind for e in engine.evaluate("web1", metrics(cpu=10))] == ["resolve"]
 
-    resolved = engine.mark_online("web1")
-    assert [e.problem for e in resolved] == ["offline"]
-    assert resolved[0].kind == "resolve"
+    clock.now = 1500
+    engine.evaluate("web1", metrics(cpu=95))
+    clock.now = 1600
+    assert engine.evaluate("web1", metrics(cpu=10)) == []
+
+    clock.now = 1800
+    engine.evaluate("web1", metrics(cpu=95))
+    clock.now = 2100
+    events = engine.evaluate("web1", metrics(cpu=10))
+    assert [e.kind for e in events] == ["resolve"]
+
+
+def test_offline_alert_only_after_threshold_failures():
+    engine = make_engine()
+
+    assert engine.record_failure("web1") == []
+    assert engine.record_failure("web1") == []
+    events = engine.record_failure("web1")
+
+    assert [e.problem for e in events] == ["offline"]
+    assert events[0].kind == "enter"
+
+
+def test_mark_online_resets_failure_streak():
+    engine = make_engine()
+    engine.record_failure("web1")
+    engine.record_failure("web1")
+
+    assert engine.mark_online("web1") == []
+
+    assert engine.record_failure("web1") == []
+    assert engine.record_failure("web1") == []
+    events = engine.record_failure("web1")
+    assert [e.problem for e in events] == ["offline"]
+
+
+def test_offline_resolve_after_enter():
+    clock = FakeClock()
+    engine = make_engine(clock=clock, cooldown=300)
+    engine.record_failure("web1")
+    engine.record_failure("web1")
+    engine.record_failure("web1")
+
+    clock.now = 1000
+    events = engine.mark_online("web1")
+
+    assert [e.problem for e in events] == ["offline"]
+    assert events[0].kind == "resolve"
 
 
 def test_offline_disabled_returns_empty():
-    engine = AlertEngine(
-        Thresholds(offline=False), 300.0, FakeClock()
-    )
+    engine = AlertEngine(Thresholds(offline=False), 300.0, FakeClock())
 
-    assert engine.evaluate_offline("web1") == []
+    assert engine.record_failure("web1") == []
+    assert engine.record_failure("web1") == []
+    assert engine.record_failure("web1") == []
 
 
 def test_mark_online_preserves_metric_problems():

@@ -1,10 +1,11 @@
 from pathlib import Path
 
 from bot.alerts.engine import AlertEngine, AlertRuntime
+from bot.collectors.system import CollectorError
 from bot.config import AppConfig, Thresholds
 from bot.main import build_dispatcher, poll_and_alert
 from bot.security import ConfirmationStore
-from bot.ssh.pool import CommandResult
+from bot.ssh.pool import CommandResult, ServerUnavailable
 
 FIXTURE = Path(__file__).parent / "fixtures" / "system_output.txt"
 
@@ -39,6 +40,14 @@ class FakePool:
 
     async def run(self, server, command, timeout=None) -> CommandResult:
         return self._result
+
+
+class RaisingPool:
+    def __init__(self, exc: BaseException) -> None:
+        self._exc = exc
+
+    async def run(self, server, command, timeout=None) -> CommandResult:
+        raise self._exc
 
 
 def test_build_dispatcher_registers_routers():
@@ -95,3 +104,28 @@ async def test_poll_and_alert_survives_send_failure():
     await poll_and_alert(bot, config, pool, engine, AlertRuntime(enabled=True))
 
     assert bot.sent == [(2, bot.sent[0][1])]
+
+
+async def test_collector_error_does_not_alert_offline():
+    config = make_config()
+    bot = FakeBot()
+    pool = RaisingPool(CollectorError("Missing section NPROC in system output"))
+    engine = AlertEngine(Thresholds(offline=True), 300.0)
+
+    await poll_and_alert(bot, config, pool, engine, AlertRuntime(enabled=True))
+
+    assert bot.sent == []
+    assert "web1" not in engine._active
+
+
+async def test_server_unavailable_alerts_offline_after_threshold():
+    config = make_config()
+    bot = FakeBot()
+    pool = RaisingPool(ServerUnavailable("network unreachable"))
+    engine = AlertEngine(Thresholds(offline=True), 300.0)
+
+    for _ in range(AlertEngine.OFFLINE_THRESHOLD):
+        await poll_and_alert(bot, config, pool, engine, AlertRuntime(enabled=True))
+
+    assert len(bot.sent) == 1
+    assert "недоступен" in bot.sent[0][1]

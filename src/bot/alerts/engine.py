@@ -21,6 +21,8 @@ class AlertRuntime:
 
 
 class AlertEngine:
+    OFFLINE_THRESHOLD = 3
+
     def __init__(
         self, thresholds: Thresholds, cooldown: float, clock=time.monotonic
     ) -> None:
@@ -29,6 +31,7 @@ class AlertEngine:
         self._clock = clock
         self._active: dict[str, set[str]] = {}
         self._last_sent: dict[tuple[str, str], float] = {}
+        self._failures: dict[str, int] = {}
 
     def _transition(
         self, server_id: str, problems: dict[str, str], now: float
@@ -48,7 +51,11 @@ class AlertEngine:
 
         for name in sorted(previous - current):
             new_active.discard(name)
-            events.append(AlertEvent(server_id, name, "resolve", ""))
+            key = (server_id, name)
+            last = self._last_sent.get(key)
+            if last is None or now - last >= self._cooldown:
+                self._last_sent[key] = now
+                events.append(AlertEvent(server_id, name, "resolve", ""))
 
         self._active[server_id] = new_active
         return events
@@ -65,18 +72,21 @@ class AlertEngine:
             problems["load"] = f"load {metrics.load_per_cpu:.2f}/CPU"
         return self._transition(server_id, problems, self._clock())
 
-    def evaluate_offline(self, server_id: str) -> list[AlertEvent]:
+    def record_failure(self, server_id: str) -> list[AlertEvent]:
+        """Register an unreachable poll; alert offline only after a run of failures."""
         if not self._thresholds.offline:
+            return []
+        count = self._failures.get(server_id, 0) + 1
+        self._failures[server_id] = count
+        if count < self.OFFLINE_THRESHOLD:
             return []
         return self._transition(
             server_id, {"offline": "сервер недоступен"}, self._clock()
         )
 
     def mark_online(self, server_id: str) -> list[AlertEvent]:
+        self._failures.pop(server_id, None)
         previous = self._active.get(server_id, set())
         if "offline" not in previous:
             return []
-        new_active = set(previous)
-        new_active.discard("offline")
-        self._active[server_id] = new_active
-        return [AlertEvent(server_id, "offline", "resolve", "")]
+        return self._transition(server_id, {}, self._clock())

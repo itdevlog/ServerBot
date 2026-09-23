@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -112,3 +113,32 @@ async def test_collect_system_runs_expected_command():
 
     assert pool.commands == [SYSTEM_COMMAND]
     assert metrics.hostname == "vps-web1"
+
+
+def test_system_command_falls_back_when_nproc_missing():
+    assert "grep -c ^processor /proc/cpuinfo" in SYSTEM_COMMAND
+
+
+def test_system_command_falls_back_when_hostname_missing():
+    assert "cat /proc/sys/kernel/hostname" in SYSTEM_COMMAND
+
+
+def test_busybox_missing_hostname_section_parses():
+    text = FIXTURE.read_text(encoding="utf-8").replace(
+        "###HOST\nvps-web1", "###HOST\n"
+    )
+
+    metrics = parse_system_output(text)
+
+    assert metrics.hostname == "unknown"
+
+
+def test_nproc_fallback_output_parses(monkeypatch):
+    busybox_output = FIXTURE.read_text(encoding="utf-8").replace(
+        "###NPROC\n4", "###NPROC\n2"
+    )
+    pool = FakePool(CommandResult(busybox_output, "", 0, 0.1))
+
+    metrics = asyncio.run(collect_system(pool, make_server()))
+
+    assert metrics.cpu_count == 2
